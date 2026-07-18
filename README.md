@@ -128,11 +128,12 @@ Todo el procesamiento Bronze/Silver/Gold corre sobre notebooks orquestados como 
 ## Orquestación
 
 Workflow de Databricks (ambiente de desarrollo) que encadena los notebooks de ingesta Bronze → transformación Silver → modelado Gold, parametrizado vía `dbutils.widgets` (catálogo, contenedores, rutas por tabla) para reutilizar el mismo notebook entre distintas fuentes y ambientes.
-![Flujo ETL](./Evidencias/gruposData.png)
+![Flujo ETL](./Evidencias/workflow.png)
 
 ## CI/CD
 
 Pipeline en **GitHub Actions** que despliega desde `dev` hacia el ambiente de `produccion`  siguiente:
+![Flujo ETL](./Evidencias/despliegue_githubActions.png)
 ![Flujo ETL](./Evidencias/interfazProd.png)
 - Sincroniza los notebooks del repositorio hacia el workspace de Databricks correspondiente.
 - Despliegue del Job como código: crea/actualiza la definición completa del Workflow en prod vía Databricks REST API / CLI (Jobs-as-code) — no se reconfigura el     Job manualmente en cada release, lo que evita drift entre lo que corre en dev y lo que corre en prod.
