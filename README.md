@@ -166,7 +166,6 @@ Las tablas Gold se exponen vía **Delta Sharing** hacia Power BI, sin duplicar d
 ├── .github/workflows/despliegue.yml                # pipelines de CI/CD                         
 └── README.md
 ```
-*(Ajusta esta sección a la estructura real de tu repo)*
 
 ## Decisiones de diseño clave
 
