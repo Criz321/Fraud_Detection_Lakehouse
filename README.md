@@ -154,6 +154,7 @@ Pipeline en **GitHub Actions** que despliega desde `dev` hacia el ambiente de `p
 
 Las tablas Gold se exponen vía **Delta Sharing** hacia Power BI, sin duplicar datos ni exportarlos a otro almacenamiento — Power BI lee directo del share definido en Unity Catalog.
 ![Flujo ETL](./Evidencias/sharingPbi.png)
+![Flujo ETL](./Evidencias/datamartproject_page-0001.jpg)
 
 ## Estructura del repositorio
 
