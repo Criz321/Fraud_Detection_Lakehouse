@@ -60,10 +60,15 @@ Todo el procesamiento Bronze/Silver/Gold corre sobre notebooks orquestados como 
 ## Gobernanza de datos (Unity Catalog)
 
 - **Metastore autoadministrado**: se eliminó el metastore por defecto del workspace y se creó uno propio (`uc-metastore`), respaldado en un contenedor dedicado del Data Lake.
+![Flujo ETL](./Evidencias/metastore.png)
 - **Storage credentials + External locations**: se crearon credenciales de acceso (Access Connector) y un external location por cada uno de los 4 contenedores (`raw`, `bronze`, `silver`, `gold`).
+![Flujo ETL](./Evidencias/externalLocations.png)
 - **Catálogo del proyecto**: `bank_dev`, con 3 esquemas (`bronze`, `silver`, `gold`), cada uno con `MANAGED LOCATION` apuntando a su contenedor dedicado — separación física real entre capas, no solo lógica.
+![Flujo ETL](./Evidencias/manageSchema1.png)
 - **Tipo de tablas**: managed Delta en las 3 capas — se evaluó external tables para Bronze (por si se necesitaba recuperar datos ante un `DROP` accidental), pero se descartó porque Raw ya funciona como fuente de verdad inmutable e independiente del catálogo; Bronze siempre es reconstruible desde ahí. Managed tables además tienen ventana de recuperación (`UNDROP TABLE`, 7–30 días) que cubre el mismo riesgo con menor complejidad operativa.
+![Flujo ETL](./Evidencias/manageSchema2.png)
 - **Control de acceso**: usuarios y grupos administrados desde Azure Account Console (Manage Account), simulando una estructura de grupos empresarial. Permisos otorgados vía `GRANT USE CATALOG`, `USE SCHEMA`, `CREATE TABLE`, `SELECT` por esquema.
+![Flujo ETL](./Evidencias/gruposData.png)
 
 
 ## Ingesta (Landing → Raw)
@@ -83,12 +88,35 @@ Todo el procesamiento Bronze/Silver/Gold corre sobre notebooks orquestados como 
 ### Bronze
 - `transactions`: ingesta incremental con **Auto Loader** (`cloudFiles`, formato CSV), esquema explícito, `trigger(availableNow=True)` para ejecución tipo batch programado (no cluster 24/7).
 - `cards` / `users`: mismo patrón de Auto Loader, formato parquet (ya tipado desde Azure SQL).
+![Flujo ETL](./Evidencias/azuresql.png)
+```python
+  df_stream_users = (
+      spark.readStream
+      .format("cloudFiles")
+      .option("cloudFiles.format", "parquet")
+      .option("cloudFiles.schemaLocation", schema_location_users)
+      .option("cloudFiles.rescuedDataColumn", "_rescued_data")
+      .load(raw_users_root)
+  )
+
+  df_bronze_users = df_stream_users.withColumn("ingestion_date", F.current_timestamp())
+  
+  query_users = (
+      df_bronze_users.writeStream
+      .format("delta")
+      .option("checkpointLocation", checkpoint_location_users)
+      .option("mergeSchema", "true")
+      .outputMode("append")
+      .trigger(availableNow=True)
+      .toTable(f"{catalogo}.{esquema}.users")
+  )
+```
 - `mcc_codes` / `fraud_labels`: **no** se ingestan con Auto Loader — son objetos JSON tipo diccionario (claves dinámicas), incompatibles con inferencia de esquema tabular. Se leen en batch como texto crudo y se parsean con `from_json` + `explode` (`MAP<STRING,STRING>` y `STRUCT<target: MAP<STRING,STRING>>` respectivamente).
 - Tablas con `CLUSTER BY` (liquid clustering) en vez de `PARTITIONED BY` — el dataset (1.5 GB) está muy por debajo del umbral (~1 TB) donde particionar tradicionalmente aporta valor; liquid clustering se adapta a los patrones de consulta sin gestión manual de particiones.
 
 ### Silver
-- Procesamiento **batch** (no streaming) — justificado porque los datos llegan en lotes discretos diarios desde ADF, no en tiempo real; streaming/CDF habría añadido complejidad operativa sin beneficio de latencia real.
-- Limpieza: `amount` y `credit_limit` (quitar `$`, castear a `DECIMAL`), parseo de `errors` a `tiene_error` (booleano) + `lista_errores` (array).
+- Procesamiento incremental (Structured Streaming) — Implementado mediante micro-lotes (foreachBatch) para aprovechar el control automático de archivos procesados   (checkpoints); esto garantiza una carga incremental eficiente y permite ejecutar la lógica Batch del MERGE (SCD Tipo 2) sin la complejidad del streaming en     tiempo real, para `users` / `cards`.
+- Limpieza: `amount` y `credit_limit` (quitar `$`, castear a `DECIMAL`), parseo de `errors` a `tiene_error` (booleano) + `lista_errores` (array) en `transactions`.
 - Validación de integridad referencial contra `users`, `cards` y `mcc_codes` (columnas `es_valida` / `motivo_invalidez`, sin descartar filas silenciosamente).
 - Enriquecimiento: `client_age`, `client_gender`, `card_brand`, `mcc_description` — unidos en el mismo join usado para la validación de integridad, evitando joins redundantes.
 - Escritura idempotente: `INSERT` directo en la primera carga (evita el overhead de `MERGE` contra tabla vacía), `MERGE INTO` (`whenMatchedUpdateAll` / `whenNotMatchedInsertAll`) en corridas incrementales posteriores.
@@ -100,17 +128,31 @@ Todo el procesamiento Bronze/Silver/Gold corre sobre notebooks orquestados como 
 ## Orquestación
 
 Workflow de Databricks (ambiente de desarrollo) que encadena los notebooks de ingesta Bronze → transformación Silver → modelado Gold, parametrizado vía `dbutils.widgets` (catálogo, contenedores, rutas por tabla) para reutilizar el mismo notebook entre distintas fuentes y ambientes.
+![Flujo ETL](./Evidencias/gruposData.png)
 
 ## CI/CD
 
-Pipeline en **GitHub Actions** que despliega desde `dev` hacia el ambiente siguiente:
+Pipeline en **GitHub Actions** que despliega desde `dev` hacia el ambiente de `produccion`  siguiente:
+![Flujo ETL](./Evidencias/interfazProd.png)
 - Sincroniza los notebooks del repositorio hacia el workspace de Databricks correspondiente.
-- Provisiona/actualiza recursos de Azure vía YAML.
-- *(Completar aquí)*: trigger del pipeline (push a rama, PR, manual), pasos exactos del `.yml`, y cómo se gestionan los secretos/credenciales de Azure en GitHub (Secrets).
+- Despliegue del Job como código: crea/actualiza la definición completa del Workflow en prod vía Databricks REST API / CLI (Jobs-as-code) — no se reconfigura el     Job manualmente en cada release, lo que evita drift entre lo que corre en dev y lo que corre en prod.
+- Activación de infraestructura: enciende/valida el cluster de prod necesario antes de desplegar.
+- Para hacer el pipeline resiliente, el script consulta la API para encontrar el ID dinámico del clúster en base a su nombre, evitando fallos si la infraestructura es recreada.
+```python
+  # 2. Validación y encendido dinámico de infraestructura
+  clusters_response=$(curl -s -X GET \
+    -H "Authorization: Bearer $DEST_TOKEN" \
+    "$DEST_HOST/api/2.0/clusters/list")
+
+  # Extracción dinámica del ID usando jq
+  cluster_id=$(echo "$clusters_response" | \
+    jq -r --arg name "$CLUSTER_NAME" '.clusters[]? | select(.cluster_name == $name) | .cluster_id')
+```
 
 ## Consumo de datos (Delta Sharing → Power BI)
 
 Las tablas Gold se exponen vía **Delta Sharing** hacia Power BI, sin duplicar datos ni exportarlos a otro almacenamiento — Power BI lee directo del share definido en Unity Catalog.
+![Flujo ETL](./Evidencias/sharingPbi.png)
 
 ## Estructura del repositorio
 
@@ -121,8 +163,7 @@ Las tablas Gold se exponen vía **Delta Sharing** hacia Power BI, sin duplicar d
 │   ├── 03_silver/                    # limpieza, validación, enriquecimiento
 │   ├── 04_gold/                      # star schema y agregados
 ├── workflows/                        # definición de jobs/orquestación
-├── .github/workflows/                # pipelines de CI/CD
-├── sql/                               # DDLs de catálogo, esquemas y tablas
+├── .github/workflows/despliegue.yml                # pipelines de CI/CD                         
 └── README.md
 ```
 *(Ajusta esta sección a la estructura real de tu repo)*
@@ -131,7 +172,7 @@ Las tablas Gold se exponen vía **Delta Sharing** hacia Power BI, sin duplicar d
 
 | Decisión | Alternativa considerada | Por qué se eligió esta |
 |---|---|---|
-| Landing + Raw unificados | Landing y Raw separados | Menor costo/complejidad; para este volumen no se justifica el contenedor intermedio |
+| Raw  | Raw  | Menor costo/complejidad|
 | Managed tables en las 3 capas | External tables en Bronze | Raw ya es la fuente de verdad inmutable; managed tiene `UNDROP` como red de seguridad adicional |
 | Liquid clustering, sin partition | `PARTITIONED BY (year, month)` | Dataset de 1.5 GB, muy por debajo del umbral donde particionar aporta valor |
 | Silver en batch | Streaming con Change Data Feed | Datos llegan en lotes diarios, no en tiempo real; menor complejidad operativa |
