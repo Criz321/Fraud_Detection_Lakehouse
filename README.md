@@ -186,3 +186,7 @@ Las tablas Gold se exponen vía **Delta Sharing** hacia Power BI, sin duplicar d
 - Migrar Bronze de Auto Loader manual a **Lakeflow Declarative Pipelines** si el workspace cuenta con plan Premium, para reducir boilerplate de orquestación.
 - Agregar pruebas de calidad de datos automatizadas (Great Expectations o `dbt tests`) dentro del pipeline de CI/CD.
 
+
+### 👤 Autor
+[Anthony Criz Ccolque Quispe](https://github.com/Criz321)
+
