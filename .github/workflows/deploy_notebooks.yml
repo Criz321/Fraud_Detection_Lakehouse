@@ -22,9 +22,13 @@ jobs:
         mkdir -p notebooks_to_deploy
         for nb in "${NOTEBOOKS[@]}"; do
           echo "Exportando $nb en modo raw..."
+          # 1. Reemplazamos los espacios por %20 para la URL
+          ENCODED_NB="${nb// /%20}"
+          ENCODED_BASE="${NOTEBOOK_BASE// /%20}"
+          # 2. Usamos las variables codificadas en la URL, pero mantenemos el nombre original para el archivo de salida
           curl -s -X GET \
             -H "Authorization: Bearer $ORIGIN_TOKEN" \
-            "$ORIGIN_HOST/api/2.0/workspace/export?path=$NOTEBOOK_BASE/$nb&format=SOURCE&direct_download=true" \
+            "$ORIGIN_HOST/api/2.0/workspace/export?path=$ENCODED_BASE/$ENCODED_NB&format=SOURCE&direct_download=true" \
             --output "notebooks_to_deploy/$nb.py"
         done
     
