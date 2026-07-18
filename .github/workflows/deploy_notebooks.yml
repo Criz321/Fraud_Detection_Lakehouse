@@ -3,6 +3,15 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'README.md'
+      - '**.png'
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.pdf'
+      - '**.ipynb'  # Evita que se active si subes Jupyter Notebooks locales al repo
+      - '**/evidencias/**' # 
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
