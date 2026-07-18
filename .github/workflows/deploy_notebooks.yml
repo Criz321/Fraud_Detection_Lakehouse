@@ -18,7 +18,7 @@ jobs:
         ORIGIN_HOST=${{ secrets.DATABRICKS_ORIGIN_HOST }}
         ORIGIN_TOKEN=${{ secrets.DATABRICKS_ORIGIN_TOKEN }}
         NOTEBOOK_BASE="/Workspace/Users/anthony.dev00@hotmail.com/Fraud_Detection_Lakehouse/Proceso"
-        NOTEBOOKS=("01.- Preparacion Ambiente" "02.- Ingest Core Data" "02.- Ingest Reference Data" "02.- Ingest Transactions" "03.- Transform Cards Data" "03.- Transform Fraud Labels Data" "03.- Transform mmc codes Data" "03.- Transform Transactions" "03.- Transform Users Data" "04.- Load Build Fraud Data Mart" "Grants")  # Agrega más según necesitesas
+        NOTEBOOKS=("01.- Preparacion Ambiente" "02.- Ingest Core Data" "02.- Ingest Reference Data" "02.- Ingest Transactions" "03.- Transform Cards Data" "03.- Transform Fraud Labels Data" "03.- Transform mcc codes Data" "03.- Transform Transactions" "03.- Transform Users Data" "04.- Load Build Fraud Data Mart" "Grants")  # Agrega más según necesitesas
         mkdir -p notebooks_to_deploy
         for nb in "${NOTEBOOKS[@]}"; do
           echo "Exportando $nb en modo raw..."
