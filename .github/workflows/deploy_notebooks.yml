@@ -36,7 +36,7 @@ jobs:
       run: |
         DEST_HOST=${{ secrets.DATABRICKS_DEST_HOST }}
         DEST_TOKEN=${{ secrets.DATABRICKS_DEST_TOKEN }}
-        DEST_BASE="/proyecto"
+        DEST_BASE="/proyecto/"
         for file in notebooks_to_deploy/*.py; do
           name=$(basename "$file" .py)
           dest_path="$DEST_BASE/$name"
@@ -150,7 +150,14 @@ jobs:
               "description": "Ingesta de datos core",
               "notebook_task": {
                 "notebook_path": "/proyecto/02.- Ingest Core Data",
-                "source": "WORKSPACE"
+                "source": "WORKSPACE",
+                "base_parameters": {
+                  "container": "raw",
+                  "containerDestino": "bronze",
+                  "catalogo": "bank_dev",
+                  "esquema": "bronze",
+                  "storageLocation": "saprojectbankdeveastus"
+                }
               },
               "existing_cluster_id": "$CLUSTER_ID",
               "timeout_seconds": 3600,
@@ -166,7 +173,14 @@ jobs:
               "description": "Ingesta de datos de referencia",
               "notebook_task": {
                 "notebook_path": "/proyecto/02.- Ingest Reference Data",
-                "source": "WORKSPACE"
+                "source": "WORKSPACE",
+                "base_parameters": {
+                  "container": "raw",
+                  "containerDestino": "bronze",
+                  "catalogo": "bank_dev",
+                  "esquema": "bronze",
+                  "storageLocation": "saprojectbankdeveastus"
+                }
               },
               "existing_cluster_id": "$CLUSTER_ID",
               "timeout_seconds": 3600,
@@ -182,7 +196,14 @@ jobs:
               "description": "Ingesta de transacciones",
               "notebook_task": {
                 "notebook_path": "/proyecto/02.- Ingest Transactions",
-                "source": "WORKSPACE"
+                "source": "WORKSPACE",
+                "base_parameters": {
+                  "container": "raw",
+                  "containerDestino": "bronze",
+                  "catalogo": "bank_dev",
+                  "esquema": "bronze",
+                  "storageLocation": "saprojectbankdeveastus"
+                }
               },
               "existing_cluster_id": "$CLUSTER_ID",
               "timeout_seconds": 3600,
@@ -198,7 +219,14 @@ jobs:
               "description": "Transformacion de datos de tarjetas",
               "notebook_task": {
                 "notebook_path": "/proyecto/03.- Transform Cards Data",
-                "source": "WORKSPACE"
+                "source": "WORKSPACE",
+                "base_parameters": {
+                  "containerSilver": "silver",
+                  "esquema_silver": "silver",
+                  "catalogo": "bank_dev",
+                  "esquema_bronze": "bronze",
+                  "storageName": "saprojectbankdeveastus"
+                }
               },
               "existing_cluster_id": "$CLUSTER_ID",
               "timeout_seconds": 3600,
@@ -214,7 +242,14 @@ jobs:
               "description": "Transformacion de datos de usuarios",
               "notebook_task": {
                 "notebook_path": "/proyecto/03.- Transform Users Data",
-                "source": "WORKSPACE"
+                "source": "WORKSPACE",
+                "base_parameters": {
+                  "containerSilver": "silver",
+                  "esquema_silver": "silver",
+                  "catalogo": "bank_dev",
+                  "esquema_bronze": "bronze",
+                  "storageName": "saprojectbankdeveastus"
+                }
               },
               "existing_cluster_id": "$CLUSTER_ID",
               "timeout_seconds": 3600,
@@ -230,7 +265,14 @@ jobs:
               "description": "Transformacion de etiquetas de fraude",
               "notebook_task": {
                 "notebook_path": "/proyecto/03.- Transform Fraud Labels Data",
-                "source": "WORKSPACE"
+                "source": "WORKSPACE",
+                "base_parameters": {
+                  "containerSilver": "silver",
+                  "esquema_silver": "silver",
+                  "catalogo": "bank_dev",
+                  "esquema_bronze": "bronze",
+                  "storageName": "saprojectbankdeveastus"
+                }
               },
               "existing_cluster_id": "$CLUSTER_ID",
               "timeout_seconds": 3600,
@@ -246,7 +288,14 @@ jobs:
               "description": "Transformacion de codigos MCC",
               "notebook_task": {
                 "notebook_path": "/proyecto/03.- Transform mcc codes Data",
-                "source": "WORKSPACE"
+                "source": "WORKSPACE",
+                "base_parameters": {
+                  "containerSilver": "silver",
+                  "esquema_silver": "silver",
+                  "catalogo": "bank_dev",
+                  "esquema_bronze": "bronze",
+                  "storageName": "saprojectbankdeveastus"
+                }
               },
               "existing_cluster_id": "$CLUSTER_ID",
               "timeout_seconds": 3600,
@@ -262,7 +311,14 @@ jobs:
               "description": "Transformacion de transacciones",
               "notebook_task": {
                 "notebook_path": "/proyecto/03.- Transform Transactions",
-                "source": "WORKSPACE"
+                "source": "WORKSPACE",
+                "base_parameters": {
+                  "containerSilver": "silver",
+                  "esquema_silver": "silver",
+                  "catalogo": "bank_dev",
+                  "esquema_bronze": "bronze",
+                  "storageName": "saprojectbankdeveastus"
+                }
               },
               "existing_cluster_id": "$CLUSTER_ID",
               "timeout_seconds": 3600,
@@ -278,7 +334,15 @@ jobs:
               "description": "Carga y construccion del Data Mart de Fraude",
               "notebook_task": {
                 "notebook_path": "/proyecto/04.- Load Build Fraud Data Mart",
-                "source": "WORKSPACE"
+                "source": "WORKSPACE",
+                "base_parameters": {
+                  "catalogo": "bank_dev",
+                  "esquema_silver": "silver",
+                  "esquema_gold": "gold",
+                  "storageName": "saprojectbankdeveastus",
+                  "containerSilver": "silver",
+                  "containerGold": "gold"
+                }
               },
               "existing_cluster_id": "$CLUSTER_ID",
               "timeout_seconds": 3600,
