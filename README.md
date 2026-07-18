@@ -26,7 +26,10 @@ Dataset fuente: Transactions Fraud Datasets (Kaggle)
 14. [Mejoras futuras](#mejoras-futuras)
 
 ## Arquitectura general
+![Flujo ETL](./Evidencias/flujo_etl.png)
+
 Todo el procesamiento Bronze/Silver/Gold corre sobre notebooks orquestados como Databricks Workflow, desplegados vía CI/CD desde este repositorio.
+
 
 ## Stack tecnológico
 
