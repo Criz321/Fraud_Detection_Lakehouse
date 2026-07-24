@@ -37,7 +37,7 @@ Todo el procesamiento Bronze/Silver/Gold corre sobre notebooks orquestados como 
 |---|---|
 | Almacenamiento | Azure Data Lake Storage Gen2 (4 contenedores: raw, bronze, silver, gold) |
 | Base de datos origen | Azure SQL Database |
-| Orquestación de ingesta | Azure Data Fabric (ADF) |
+| Orquestación de ingesta | Azure Data Factory (ADF) |
 | Procesamiento | Azure Databricks (PySpark, Structured Streaming, Auto Loader) |
 | Gobernanza | Unity Catalog (metastore autoadministrado) |
 | Formato de tablas | Delta Lake |
